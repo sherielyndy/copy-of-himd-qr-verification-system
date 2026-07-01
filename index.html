@@ -12,15 +12,15 @@
     .message { font-size:18px; margin-top:15px; }
     .contact { background:#fff4cc; padding:15px; border-radius:12px; margin-top:20px; }
     .small { color:#555; font-size:13px; margin-top:20px; }
+    .red-bold { color:red; font-weight:bold; }
   </style>
 </head>
+
 <body>
-  <div class="card" id="card">
-    Checking QR Code...
-  </div>
+  <div class="card" id="card">Checking QR Code...</div>
 
   <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypiZwwIormcFaUSQSxK6mfk_c8ykWB5UkBmeDF5CKBLogT5Mch_hzzD3-tvLUhiyi2cg/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMgwKdLTNpXu1AyioyR2dv6uRe_5osy4ia8P8dkqGr9FZpr8qd_tV8D-eLPGHdfjFUuw/exec";
 
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
@@ -29,19 +29,26 @@
       const card = document.getElementById("card");
 
       try {
-        const response = await fetch(APPS_SCRIPT_URL + "?token=" + encodeURIComponent(token));
+        const response = await fetch(APPS_SCRIPT_URL + "?token=" + encodeURIComponent(token || ""));
         const result = await response.json();
 
         let detailsHtml = "";
 
-        if (result.isValid) {
+        if (
+          result.isValid ||
+          result.status === "EXPIRED QR" ||
+          result.status === "SCAN LIMIT REACHED"
+        ) {
+          const expiryClass = result.status === "EXPIRED QR" ? "red-bold" : "";
+          const scanClass = result.status === "SCAN LIMIT REACHED" ? "red-bold" : "";
+
           detailsHtml = `
             <hr>
             <p><b>QR ID:</b> ${result.qrId}</p>
             <p><b>Document Type:</b> ${result.documentType}</p>
             <p><b>Date Issued:</b> ${result.dateIssued}</p>
-            <p><b>Expiry Date:</b> ${result.expiryDate}</p>
-            <p><b>Scan Count:</b> ${result.scanCount}</p>
+            <p class="${expiryClass}"><b>Expiry Date:</b> ${result.expiryDate}</p>
+            <p class="${scanClass}"><b>Scan Count:</b> ${result.scanCount}</p>
           `;
         }
 
@@ -57,6 +64,7 @@
           </div>
           <p class="small">No patient personal information is displayed on this page.</p>
         `;
+
       } catch (error) {
         card.innerHTML = `
           <div class="invalid">VERIFICATION ERROR</div>
