@@ -3,11 +3,12 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HIMD QR Verification</title>
+
   <style>
     body { font-family: Arial; text-align: center; padding: 25px; background:#f7f7f7; }
-    .card { max-width: 430px; margin:auto; background:white; padding:25px; border-radius:18px; box-shadow:0 0 15px #ccc; }
+    .card { max-width:430px; margin:auto; background:white; padding:25px; border-radius:18px; box-shadow:0 0 15px #ccc; }
     .valid { color:green; font-size:26px; font-weight:bold; }
-    .invalid { color:#e53935; font-size:26px; font-weight:bold; }
+    .invalid { color:red; font-size:26px; font-weight:bold; }
     img { max-width:150px; margin-bottom:15px; }
     .message { font-size:18px; margin-top:15px; }
     .contact { background:#fff4cc; padding:15px; border-radius:12px; margin-top:20px; }
@@ -20,57 +21,70 @@
   <div class="card" id="card">Checking QR Code...</div>
 
   <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7ZfLNRpT-Lc4VAaLFux3yZ-Zevn-iJu_h-6FPVwe2RsLGpKfuhl1S-eoMHbRIyHfdQw/exec";
+    const APPS_SCRIPT_URL = "Phttps://script.google.com/macros/s/AKfycbz7vNVnXL6mVk-78lgxbfiGbFJ056APi_ZJ6FR4qQN40XLk4Gy4--nnwxkcG159M3fmvQ/exec";
 
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = params.get("token") || "";
 
-    async function verifyQR() {
+    function showResult(result) {
       const card = document.getElementById("card");
 
-      try {
-        const response = await fetch(APPS_SCRIPT_URL + "?token=" + encodeURIComponent(token || ""));
-        const result = await response.json();
+      let detailsHtml = "";
 
-        let detailsHtml = "";
+      if (
+        result.isValid ||
+        result.status === "EXPIRED QR" ||
+        result.status === "SCAN LIMIT REACHED"
+      ) {
+        const expiryClass = result.status === "EXPIRED QR" ? "red-bold" : "";
+        const scanClass = result.status === "SCAN LIMIT REACHED" ? "red-bold" : "";
 
-        if (
-          result.isValid ||
-          result.status === "EXPIRED QR" ||
-          result.status === "SCAN LIMIT REACHED"
-        ) {
-          const expiryClass = result.status === "EXPIRED QR" ? "red-bold" : "";
-          const scanClass = result.status === "SCAN LIMIT REACHED" ? "red-bold" : "";
-
-          detailsHtml = `
-            <hr>
-            <p><b>QR ID:</b> ${result.qrId}</p>
-            <p><b>Document Type:</b> ${result.documentType}</p>
-            <p><b>Date Issued:</b> ${result.dateIssued}</p>
-            <p class="${expiryClass}"><b>Expiry Date:</b> ${result.expiryDate}</p>
-            <p class="${scanClass}"><b>Scan Count:</b> ${result.scanCount}</p>
-          `;
-        }
-
-        card.innerHTML = `
-          <img src="${result.gifUrl}" alt="QR Status">
-          <div class="${result.isValid ? 'valid' : 'invalid'}">${result.status}</div>
-          <p class="message">${result.message}</p>
-          ${detailsHtml}
-          <div class="contact">
-            <b>For verification, please contact:</b><br>
-            Health Information Management Department<br>
-            ${result.contact}
-          </div>
-          <p class="small">No patient personal information is displayed on this page.</p>
-        `;
-
-      } catch (error) {
-        card.innerHTML = `
-          <div class="invalid">VERIFICATION ERROR</div>
-          <p class="message">Unable to verify QR Code. Please call HIMD to verify.</p>
+        detailsHtml = `
+          <hr>
+          <p><b>QR ID:</b> ${result.qrId}</p>
+          <p><b>Document Type:</b> ${result.documentType}</p>
+          <p><b>Date Issued:</b> ${result.dateIssued}</p>
+          <p class="${expiryClass}"><b>Expiry Date:</b> ${result.expiryDate}</p>
+          <p class="${scanClass}"><b>Scan Count:</b> ${result.scanCount}</p>
         `;
       }
+
+      card.innerHTML = `
+        <img src="${result.gifUrl}" alt="QR Status">
+        <div class="${result.isValid ? 'valid' : 'invalid'}">${result.status}</div>
+        <p class="message">${result.message}</p>
+
+        ${detailsHtml}
+
+        <div class="contact">
+          <b>For verification, please contact:</b><br>
+          Health Information Management Department<br>
+          ${result.contact}
+        </div>
+
+        <p class="small">No patient personal information is displayed on this page.</p>
+      `;
+    }
+
+    function showError() {
+      const card = document.getElementById("card");
+      card.innerHTML = `
+        <div class="invalid">VERIFICATION ERROR</div>
+        <p class="message">Unable to verify QR Code. Please call HIMD to verify.</p>
+      `;
+    }
+
+    function verifyQR() {
+      const script = document.createElement("script");
+
+      script.src =
+        APPS_SCRIPT_URL +
+        "?token=" + encodeURIComponent(token) +
+        "&callback=showResult";
+
+      script.onerror = showError;
+
+      document.body.appendChild(script);
     }
 
     verifyQR();
